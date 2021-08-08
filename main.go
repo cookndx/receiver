@@ -107,9 +107,11 @@ func processUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-	log.Printf("Uploaded File: %+v", handler.Filename)
-	log.Printf("File Size: %+v", handler.Size)
-	log.Printf("MIME Header: %+v", handler.Header)
+	log.Printf("File uploaded. %+v", map[string]interface{}{
+		"size":                handler.Size,
+		"content_disposition": handler.Header["Content-Disposition"],
+		"content_type":        handler.Header["Content-Type"],
+	})
 
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {

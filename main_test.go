@@ -88,9 +88,8 @@ func TestHelloHandler(t *testing.T) {
 		rr := httptest.NewRecorder()
 		helloHandler(rr, req)
 
-		if got := rr.Body.String(); got != test.want {
-			t.Errorf("%s: got %q, want %q", test.label, got, test.want)
-		}
+		got := rr.Body.String()
+		assert.Equal(t, test.want, got)
 	}
 }
 
@@ -102,8 +101,8 @@ func TestUploadGetHandler(t *testing.T) {
 	}{
 		{
 			label:      "default",
-			wantPrefix: "<!DOCTYPE html>\n<html>",
-			wantSuffix: "</html>\n",
+			wantPrefix: "<!DOCTYPE html>\n",
+			wantSuffix: "</html>",
 		},
 	}
 
@@ -114,12 +113,9 @@ func TestUploadGetHandler(t *testing.T) {
 		rr := httptest.NewRecorder()
 		uploadHandler(rr, req)
 
-		if got := rr.Body.String(); strings.HasPrefix(got, test.wantPrefix) {
-			t.Errorf("%s: got %q, want %q", test.label, got, test.wantPrefix)
-		}
-		if got := rr.Body.String(); strings.HasSuffix(got, test.wantSuffix) {
-			t.Errorf("%s: got %q, want %q", test.label, got, test.wantSuffix)
-		}
+		got := rr.Body.String()
+		assert.True(t, strings.HasPrefix(got, test.wantPrefix), "%s: got %q, want %q", test.label, got, test.wantPrefix)
+		assert.True(t, strings.HasSuffix(got, test.wantSuffix), "%s: got %q, want %q", test.label, got, test.wantSuffix)
 	}
 }
 
@@ -143,7 +139,5 @@ func TestUploadPostHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	uploadHandler(rr, req)
 
-	if rr.Code != http.StatusCreated {
-		t.Errorf("Expected %d, received %d", http.StatusCreated, rr.Code)
-	}
+	assert.Equal(t, http.StatusCreated, rr.Code)
 }
