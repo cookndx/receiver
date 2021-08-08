@@ -17,34 +17,9 @@ const bucketName = "cookndx-dev-testing-2021-02"
 
 var photos BucketStorage
 
-//// BEGIN Abstraction over storage.Writer
-type PhotoWriter interface {
-	io.WriteCloser
-	SetContentType(contentType string)
-}
-
-type ObjectWriter struct {
-	ContentType   string
-	wrappedWriter *storage.Writer
-}
-
-func (o *ObjectWriter) Write(p []byte) (n int, err error) {
-	return o.wrappedWriter.Write(p)
-}
-
-func (o *ObjectWriter) Close() error {
-	return o.wrappedWriter.Close()
-}
-
-func (o *ObjectWriter) SetContentType(contentType string) {
-	o.ContentType = contentType
-}
-
-//// END Abstraction over storage.Writer
-
 //// BEGIN Abstraction over storage.BucketHandle
 type BucketStorage interface {
-	NewWriter(objectKey string) *PhotoWriter
+	NewWriter(objectKey string) io.WriteCloser
 }
 
 type GCPBucket struct {
@@ -52,16 +27,10 @@ type GCPBucket struct {
 	bucket *storage.BucketHandle
 }
 
-func (b *GCPBucket) NewWriter(objectKey string) *PhotoWriter {
+func (b *GCPBucket) NewWriter(objectKey string) io.WriteCloser {
 	objectPath := uuid.New().String()
 	obj := b.bucket.Object(objectPath)
-
-	// Write the content
-	var writer PhotoWriter
-	writer = &ObjectWriter{
-		wrappedWriter: obj.NewWriter(*b.ctx),
-	}
-	return &writer
+	return obj.NewWriter(*b.ctx)
 }
 
 //// END Abstraction over storage.BucketHandle
@@ -110,13 +79,12 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Write the content
 	writer := photos.NewWriter("ignored")
-	(*writer).SetContentType("text/plain")
 
-	if _, err := fmt.Fprintf(*writer, "Hello %s!\n", name); err != nil {
+	if _, err := fmt.Fprintf(writer, "Hello %s!\n", name); err != nil {
 		log.Fatalf("Cannot write object; %+v", err)
 	}
 	//Close the writer to finish out
-	if err := (*writer).Close(); err != nil {
+	if err := (writer).Close(); err != nil {
 		log.Fatalf("Cannot close object; %+v", err)
 	}
 	fmt.Fprintf(w, "Hello %s!\n", name)
@@ -152,14 +120,14 @@ func processUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Write the content
 	writer := photos.NewWriter("ignored parameter")
-	if _, err := (*writer).Write(fileBytes); err != nil {
+	if _, err := writer.Write(fileBytes); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Cannot write object; %+v", err)
 		return
 	}
 
 	//Close the writer to finish out
-	if err := (*writer).Close(); err != nil {
+	if err := writer.Close(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Cannot close object; %+v", err)
 		return

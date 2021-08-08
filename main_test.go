@@ -16,6 +16,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -28,21 +29,21 @@ import (
 )
 
 type MockBucket struct {
-	WriterFn      func(string) *PhotoWriter
+	WriterFn      func(string) io.WriteCloser
 	WriterInvoked bool
 }
 
 type MockWriter struct{}
 
-func (p *MockBucket) NewWriter(objKey string) *PhotoWriter {
+func (p *MockBucket) NewWriter(objKey string) io.WriteCloser {
 	p.WriterInvoked = true
 	if p.WriterFn != nil {
 		return p.NewWriter(objKey)
 	}
 
-	var mockWriter PhotoWriter
+	var mockWriter io.WriteCloser
 	mockWriter = &MockWriter{}
-	return &mockWriter
+	return mockWriter
 }
 
 func (w *MockWriter) Write(p []byte) (n int, err error) {
