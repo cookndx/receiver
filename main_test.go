@@ -15,9 +15,16 @@
 package main
 
 import (
+	"bytes"
+	"io/ioutil"
+	"mime/multipart"
+	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type MockBucket struct {
@@ -50,7 +57,7 @@ func (w *MockWriter) SetContentType(contentType string) {
 	// no-op
 }
 
-func TestHandler(t *testing.T) {
+func TestHelloHandler(t *testing.T) {
 	tests := []struct {
 		label string
 		want  string
@@ -68,7 +75,7 @@ func TestHandler(t *testing.T) {
 		},
 	}
 
-	Photos = &MockBucket{}
+	photos = &MockBucket{}
 
 	originalName := os.Getenv("NAME")
 	defer os.Setenv("NAME", originalName)
@@ -78,10 +85,64 @@ func TestHandler(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/", nil)
 		rr := httptest.NewRecorder()
-		handler(rr, req)
+		helloHandler(rr, req)
 
 		if got := rr.Body.String(); got != test.want {
 			t.Errorf("%s: got %q, want %q", test.label, got, test.want)
 		}
+	}
+}
+
+func TestUploadGetHandler(t *testing.T) {
+	tests := []struct {
+		label      string
+		wantPrefix string
+		wantSuffix string
+	}{
+		{
+			label:      "default",
+			wantPrefix: "<!DOCTYPE html>\n<html>",
+			wantSuffix: "</html>\n",
+		},
+	}
+
+	photos = &MockBucket{}
+
+	for _, test := range tests {
+		req := httptest.NewRequest(http.MethodGet, "/upload", nil)
+		rr := httptest.NewRecorder()
+		uploadHandler(rr, req)
+
+		if got := rr.Body.String(); strings.HasPrefix(got, test.wantPrefix) {
+			t.Errorf("%s: got %q, want %q", test.label, got, test.wantPrefix)
+		}
+		if got := rr.Body.String(); strings.HasSuffix(got, test.wantSuffix) {
+			t.Errorf("%s: got %q, want %q", test.label, got, test.wantSuffix)
+		}
+	}
+}
+
+func TestUploadPostHandler(t *testing.T) {
+	fileName := "LICENSE"
+	fileBytes, err := ioutil.ReadFile(fileName)
+	assert.NoError(t, err)
+
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("sourceFile", fileName)
+	assert.NoError(t, err)
+	_, err = part.Write(fileBytes)
+	assert.NoError(t, err)
+
+	err = writer.Close()
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/upload", body)
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+	rr := httptest.NewRecorder()
+	uploadHandler(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Errorf("Expected %d, received %d", http.StatusCreated, rr.Code)
 	}
 }
