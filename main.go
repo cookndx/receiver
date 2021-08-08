@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -17,8 +18,7 @@ var Photos BucketStorage
 
 //// BEGIN Abstraction over storage.Writer
 type PhotoWriter interface {
-	Write(p []byte) (n int, err error)
-	Close() error
+	io.WriteCloser
 	SetContentType(contentType string)
 }
 
