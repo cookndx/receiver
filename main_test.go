@@ -20,6 +20,36 @@ import (
 	"testing"
 )
 
+type MockBucket struct {
+	WriterFn      func(string) *PhotoWriter
+	WriterInvoked bool
+}
+
+type MockWriter struct{}
+
+func (p *MockBucket) NewWriter(objKey string) *PhotoWriter {
+	p.WriterInvoked = true
+	if p.WriterFn != nil {
+		return p.NewWriter(objKey)
+	}
+
+	var mockWriter PhotoWriter
+	mockWriter = &MockWriter{}
+	return &mockWriter
+}
+
+func (w *MockWriter) Write(p []byte) (n int, err error) {
+	return 0, nil
+}
+
+func (w *MockWriter) Close() error {
+	return nil
+}
+
+func (w *MockWriter) SetContentType(contentType string) {
+	// no-op
+}
+
 func TestHandler(t *testing.T) {
 	tests := []struct {
 		label string
@@ -37,6 +67,8 @@ func TestHandler(t *testing.T) {
 			name:  "Override",
 		},
 	}
+
+	Photos = &MockBucket{}
 
 	originalName := os.Getenv("NAME")
 	defer os.Setenv("NAME", originalName)

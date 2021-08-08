@@ -2,4 +2,7 @@ module cookndx.receiver
 
 go 1.14
 
-require cloud.google.com/go/storage v1.16.0 // indirect
+require (
+	cloud.google.com/go/storage v1.16.0
+	github.com/google/uuid v1.3.0
+)

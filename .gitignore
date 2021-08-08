@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+cookndx.receiver
 
 # Test binary, built with `go test -c`
 *.test
