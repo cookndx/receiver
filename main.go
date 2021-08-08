@@ -77,16 +77,6 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 		name = "World"
 	}
 
-	// Write the content
-	writer := photos.NewWriter("ignored")
-
-	if _, err := fmt.Fprintf(writer, "Hello %s!\n", name); err != nil {
-		log.Fatalf("Cannot write object; %+v", err)
-	}
-	//Close the writer to finish out
-	if err := (writer).Close(); err != nil {
-		log.Fatalf("Cannot close object; %+v", err)
-	}
 	fmt.Fprintf(w, "Hello %s!\n", name)
 }
 
